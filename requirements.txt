@@ -1,0 +1,6 @@
+MODULES:
+
+Tkinter
+PIL
+NumPy
+OpenCV
