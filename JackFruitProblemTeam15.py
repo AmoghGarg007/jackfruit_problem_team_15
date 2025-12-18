@@ -26,7 +26,7 @@ import numpy as np
 import cv2
 
 img = None
-original_img = None 
+original_img = None
 
 undo_stack = []
 redo_stack = []
@@ -37,6 +37,7 @@ IMAGE CONVERSIONS
 ---------------------------------------
 """
 def cv2_to_pil(cv_img):
+    # Converts an OpenCV BGR image into a PIL RGB image for GUI display
     if cv_img is None:
         return None
     rgb = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
@@ -44,11 +45,13 @@ def cv2_to_pil(cv_img):
 
 
 def pil_to_cv2(pil_img):
+    # Converts a PIL RGB image into an OpenCV-compatible BGR image
     arr = np.array(pil_img.convert("RGB"))
     return cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
 
 
 def dodge(front, back):
+    # Blends two grayscale images using dodge technique to simulate pencil sketch effect
     front = front.astype("float32")
     back = back.astype("float32")
     result = front / (255 - back)
@@ -56,6 +59,7 @@ def dodge(front, back):
 
 
 def sketch_from_bgr(cv_bgr_image, ksize=21):
+    # Generates a sketch-style image by edge enhancement and intensity blending
     gray = cv2.cvtColor(cv_bgr_image, cv2.COLOR_BGR2GRAY)
     inv = 255 - gray
     blur = cv2.GaussianBlur(inv, (ksize, ksize), 0)
@@ -64,6 +68,7 @@ def sketch_from_bgr(cv_bgr_image, ksize=21):
 
 
 def cartoonify_bgr(cv_bgr_image, quantization_k=8, edge_block_size=9):
+    # Converts a real image into a cartoon-like version using color quantization and edge masking
     if cv_bgr_image is None:
         raise ValueError("Input image to cartoonify_bgr is None")
 
@@ -122,6 +127,7 @@ def cartoonify_bgr(cv_bgr_image, quantization_k=8, edge_block_size=9):
     return out
 
 def filter_warm(cv_bgr):
+    # Applies a warm color tone by boosting reds and enhancing brightness contrast
     img = cv_bgr.astype(np.float32)
     b, g, r = cv2.split(img)
     r = np.clip(r * 1.12 + 6, 0, 255)
@@ -139,6 +145,7 @@ def filter_warm(cv_bgr):
 
 
 def filter_cool(cv_bgr):
+    # Applies a cool color tone by boosting blues and slightly reducing saturation
     img = cv_bgr.astype(np.float32)
     b, g, r = cv2.split(img)
     b = np.clip(b * 1.15 + 4, 0, 255)
@@ -152,6 +159,7 @@ def filter_cool(cv_bgr):
 
 
 def filter_vintage(cv_bgr):
+    # Applies a vintage/sepia look using color transformation and saturation reduction
     img = cv_bgr.astype(np.float32)
     kernel = np.array([[0.393, 0.769, 0.189],
                        [0.349, 0.686, 0.168],
@@ -168,6 +176,7 @@ def filter_vintage(cv_bgr):
 
 
 def sharpen_cv(cv_bgr, amount=1.0, radius=1.0):
+    # Sharpens image details using unsharp masking with controllable strength
     img = cv_bgr.astype(np.float32)
     ksize = max(3, int(max(1, radius) * 2) | 1)
 
@@ -182,12 +191,14 @@ IMPLEMENTATION OF UNDO/REDO USING STACKS
 ---------------------------------------
 """
 def push_undo_state():
+    # Saves the current image state to enable undo functionality
     if img is not None:
         undo_stack.append(img.copy())
         redo_stack.clear()
 
 
 def undo():
+    # Reverts the image to the previous state using an undo stack
     global img
     if undo_stack:
         redo_stack.append(img.copy())
@@ -196,6 +207,7 @@ def undo():
 
 
 def redo():
+    # Restores the last undone image state using a redo stack
     global img
     if redo_stack:
         undo_stack.append(img.copy())
@@ -204,13 +216,17 @@ def redo():
 
 
 def gui():
+    # Initializes and manages the entire graphical user interface and user interactions
     global tk_root, img_label, top_bar, processing_frame, image_frame, theme_buttons
+    # Global references are used so other functions can update the GUI dynamically
+
     tk_root = tk.Tk()
     tk_root.title("Jackfruit Problem")
     tk_root.geometry("1200x700")
 
     top_bar = tk.Frame(tk_root)
     top_bar.pack(side="top", fill="x", pady=10)
+    # Top bar acts as the main control panel for file and history operations
 
     tk.Button(top_bar, text="Open Image", command=imgopen).pack(side="left", padx=5)
     tk.Button(top_bar, text="Save Image", command=imgsave).pack(side="left", padx=5)
@@ -219,9 +235,13 @@ def gui():
     tk.Button(top_bar, text="Undo", command=undo).pack(side="left", padx=5)
     tk.Button(top_bar, text="Redo", command=redo).pack(side="left", padx=5)
     tk.Button(top_bar, text="Exit", command=tk_root.quit).pack(side="left", padx=5)
+    # Each button is directly mapped to a functional image operation
 
     dark_mode_var = tk.BooleanVar(value=False)
+    # BooleanVar allows the checkbox state to be tracked reactively
+
     def toggle_dark():
+        # Callback function that switches themes based on checkbox state
         apply_theme(dark_mode_var.get())
 
     dark_check = tk.Checkbutton(top_bar, text="Dark Mode", variable=dark_mode_var, command=toggle_dark)
@@ -234,6 +254,7 @@ def gui():
         padx=10,
         pady=10
     )
+    # Dedicated side panel for all image processing actions
     processing_frame.pack(side="right", fill="y", padx=20, pady=(0, 20))
 
     tk.Label(processing_frame, text="Image Processing").pack(pady=5)
@@ -243,9 +264,12 @@ def gui():
     tk.Button(processing_frame, text="Invert Colors", command=imgprocess_invert).pack(pady=5)
     tk.Button(processing_frame, text="Sketch Effect", command=imgprocess_sketch).pack(pady=5)
     tk.Button(processing_frame, text="Cartoonify", command=imgprocess_cartoon).pack(pady=5)
+    # Buttons trigger individual image transformation pipelines
 
     filter_var = tk.StringVar(processing_frame)
     filter_var.set("Filters")
+    # StringVar stores the currently selected filter option
+
     filters_menu = tk.OptionMenu(
         processing_frame,
         filter_var,
@@ -257,22 +281,28 @@ def gui():
             imgprocess_filter_sharpen()
         )
     )
+    # Lambda routes the selected dropdown option to the correct filter function
+
     filters_menu.pack(pady=10)
 
     image_frame = tk.Frame(tk_root, bd=3, relief="groove", padx=10, pady=10)
+    # Central frame where the processed image is displayed
     image_frame.pack(side="right", expand=True, fill="both", padx=20, pady=(0, 20))
 
     img_label = tk.Label(image_frame, bg="black")
+    # Label widget is used as an image container
     img_label.pack(expand=True, fill="both")
 
     theme_buttons = []
+    # Stores references to buttons so theme colors can be updated dynamically
 
     for child in processing_frame.winfo_children():
         if isinstance(child, tk.Button) or isinstance(child, tk.Checkbutton):
             theme_buttons.append(child)
+    # Collects all interactive widgets that need theme styling
 
     def apply_theme(dark=False):
-        # colors
+        # Dynamically switches UI colors between light and dark themes
         if dark:
             root_bg = "#2b2b2b"
             frame_bg = "#333333"
@@ -288,43 +318,44 @@ def gui():
             btn_fg = "#000000"
             entry_bg = "#ffffff"
 
-        # root and frames
+        # Apply background colors to main containers
         tk_root.configure(bg=root_bg)
         top_bar.configure(bg=root_bg)
         processing_frame.configure(bg=frame_bg)
         image_frame.configure(bg=frame_bg)
 
-        # img_label background should contrast
+        # Image label background is adjusted for contrast
         img_label.configure(bg=entry_bg)
 
-        # labels and option menu
+        # Update label and dropdown styles inside frames
         for w in [processing_frame, image_frame]:
             for child in w.winfo_children():
                 if isinstance(child, tk.Label):
                     child.configure(bg=frame_bg, fg=text_fg)
                 if isinstance(child, tk.OptionMenu):
-                    # OptionMenu is a Menu + Button; style the button part
+                    # OptionMenu styling affects only the visible button part
                     try:
                         child.configure(bg=btn_bg, fg=btn_fg)
                     except Exception:
                         pass
 
-        # style top_bar children (buttons + checkbutton)
+        # Style top bar buttons and checkbox
         for child in top_bar.winfo_children():
             if isinstance(child, tk.Button) or isinstance(child, tk.Checkbutton):
                 child.configure(bg=btn_bg, fg=btn_fg, activebackground=btn_bg, activeforeground=btn_fg)
             elif isinstance(child, tk.Label):
                 child.configure(bg=root_bg, fg=text_fg)
 
-        # style processing buttons
+        # Apply same theme to processing buttons
         for b in theme_buttons:
             try:
                 b.configure(bg=btn_bg, fg=btn_fg, activebackground=btn_bg, activeforeground=btn_fg)
             except Exception:
                 pass
-    # apply initial theme (light)
-    apply_theme(dark=False)
+    # Apply default light theme at startup
+    apply_theme(dark=True)
 
+    # Starts the Tkinter event loop and listens for user interactions
     tk_root.mainloop()
 
 
@@ -334,6 +365,7 @@ IMAGE FUNCTIONS
 ---------------------------------------
 """
 def imgopen():
+    # Opens an image file and initializes editing state and history
     global img, original_img
     path = filedialog.askopenfilename(filetypes=[("Images", "*.jpg *.jpeg *.png *.bmp *.tiff")])
     if not path:
@@ -348,6 +380,7 @@ def imgopen():
 
 
 def imgsave():
+    # Saves the currently displayed image to disk
     if img is None:
         messagebox.showerror("Error", "No image to save.")
         return
@@ -357,6 +390,7 @@ def imgsave():
 
 
 def imgreset():
+    # Restores the image to its original unedited state
     global img
     img = original_img.copy()
 
@@ -368,6 +402,7 @@ def imgreset():
 
 
 def update_display(pil_img):
+    # Resizes and renders the image correctly within the GUI display area
     global imageTk
 
     display_width = img_label.winfo_width()
@@ -385,6 +420,7 @@ def update_display(pil_img):
 
 
 def open_cropper():
+    # Opens an interactive cropping window with live preview and selection handling
     global img, original_img, undo_stack, redo_stack
     if img is None:
         messagebox.showinfo("No image", "Open an image first before cropping.")
@@ -589,30 +625,35 @@ IMAGE PROCESSING
 ---------------------------------------
 """
 def imgprocess_gray():
+    # Converts the image to grayscale while preserving undo history
     global img
     push_undo_state()
     img = img.convert("L").convert("RGB")
     update_display(img)
 
 def imgprocess_flip_horizontal():
+    # Flips the image horizontally across the vertical axis
     global img
     push_undo_state()
     img = ImageOps.mirror(img)
     update_display(img)
 
 def imgprocess_flip_vertical():
+    # Flips the image vertically across the horizontal axis
     global img
     push_undo_state()
     img = ImageOps.flip(img)
     update_display(img)
 
 def imgprocess_invert():
+    # Inverts all pixel colors to produce a negative image effect
     global img
     push_undo_state()
     img = ImageOps.invert(img)
     update_display(img)
 
 def imgprocess_sketch():
+    # Applies a sketch effect using OpenCV-based image processing
     global img
     push_undo_state()
     cv = pil_to_cv2(img)
@@ -620,6 +661,7 @@ def imgprocess_sketch():
     update_display(img)
 
 def imgprocess_cartoon():
+    # Applies a cartoon effect by simplifying colors and emphasizing edges
     global img
     push_undo_state()
     cv = pil_to_cv2(img)
@@ -627,6 +669,7 @@ def imgprocess_cartoon():
     update_display(img)
 
 def imgprocess_filter_warm():
+    # Applies a warm color filter to enhance image tone
     global img
     push_undo_state()
     cv = pil_to_cv2(img)
@@ -634,6 +677,7 @@ def imgprocess_filter_warm():
     update_display(img)
 
 def imgprocess_filter_cool():
+    # Applies a cool color filter for a bluish visual tone
     global img
     push_undo_state()
     cv = pil_to_cv2(img)
@@ -641,6 +685,7 @@ def imgprocess_filter_cool():
     update_display(img)
 
 def imgprocess_filter_vintage():
+    # Applies a vintage-style filter for an aged photograph look
     global img
     push_undo_state()
     cv = pil_to_cv2(img)
@@ -648,14 +693,15 @@ def imgprocess_filter_vintage():
     update_display(img)
 
 def imgprocess_filter_sharpen():
+    # Enhances image sharpness to improve edge clarity
     global img
     push_undo_state()
     cv = pil_to_cv2(img)
     img = cv2_to_pil(sharpen_cv(cv, amount=1.1, radius=1.2))
     update_display(img)
 
-
 def main():
+    # Launches the GUI application
     gui()
 
 if __name__ == "__main__":
