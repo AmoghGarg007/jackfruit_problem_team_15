@@ -49,7 +49,7 @@ def pil_to_cv2(pil_img):
     arr = np.array(pil_img.convert("RGB"))
     return cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
 
-
+# grayscale > invert >  blur > dodge blend > sketch
 def dodge(front, back):
     # Blends two grayscale images using dodge technique to simulate pencil sketch effect
     front = front.astype("float32")
