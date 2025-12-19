@@ -74,11 +74,11 @@ def cartoonify_bgr(cv_bgr_image, quantization_k=8, edge_block_size=9):
 
     img = cv_bgr_image.copy()
     if img.dtype != np.uint8:
-        img = np.clip(img, 0, 255).astype(np.uint8)
+        img = np.clip(img, 0, 255).astype(np.uint8) # numpy expects uint8 datatype
 
-    h, w = img.shape[:2]
+    h, w = img.shape[:2] # saving size of image for later use
 
-    img_filtered = cv2.pyrMeanShiftFiltering(img, 21, 51)
+    img_filtered = cv2.pyrMeanShiftFiltering(img, 21, 51) # removing slight variations of color and replacing them by a block of the mean color
 
     Z = img_filtered.reshape((-1, 3)).astype(np.float32)
 
