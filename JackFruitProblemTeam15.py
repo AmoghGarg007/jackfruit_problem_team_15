@@ -78,7 +78,7 @@ def cartoonify_bgr(cv_bgr_image, quantization_k=8, edge_block_size=9):
 
     h, w = img.shape[:2] # saving size of image for later use
 
-    img_filtered = cv2.pyrMeanShiftFiltering(img, 21, 51) # removing slight variations of color and replacing them by a block of the mean color
+    img_filtered = cv2.pyrMeanShiftFiltering(img, 21, 51) # removing slight variations of color and keeping edges
 
     Z = img_filtered.reshape((-1, 3)).astype(np.float32)
 
@@ -91,18 +91,18 @@ def cartoonify_bgr(cv_bgr_image, quantization_k=8, edge_block_size=9):
         raise RuntimeError(f"kmeans failed: {e}")
 
     try:
-        quant = centers[labels.flatten()].reshape(img_filtered.shape).astype(np.uint8)
+        quant = centers[labels.flatten()].reshape(img_filtered.shape).astype(np.uint8) # replacing each pizel wih cluster color
     except Exception as e:
         quant = centers[labels.flatten()][:h*w].reshape((h, w, 3)).astype(np.uint8)
-
+    # making edges
     gray = cv2.cvtColor(img_filtered, cv2.COLOR_BGR2GRAY)
     gray_blur = cv2.medianBlur(gray, 7)
 
-    edges = cv2.adaptiveThreshold(gray_blur, 255,
+    edges = cv2.adaptiveThreshold(gray_blur, 255,     # producing black and bold lines for edges
                                   cv2.ADAPTIVE_THRESH_MEAN_C,
                                   cv2.THRESH_BINARY, edge_block_size, 2)
 
-    if edges.shape[:2] != (h, w):
+    if edges.shape[:2] != (h, w): # making the shape of the image same as orginal
         try:
             edges = cv2.resize(edges, (w, h), interpolation=cv2.INTER_NEAREST)
         except Exception:
@@ -115,7 +115,7 @@ def cartoonify_bgr(cv_bgr_image, quantization_k=8, edge_block_size=9):
 
 
     try:
-        out = cv2.bitwise_and(quant, edges_bgr)
+        out = cv2.bitwise_and(quant, edges_bgr) #combining the edges and colors 
     except Exception as e:
         q = quant.astype(np.uint8)
         e_b = edges_bgr.astype(np.uint8)
